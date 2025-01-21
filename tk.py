@@ -47,10 +47,10 @@ class TimeManager:
         self.countdown = None
 
         # 绑定鼠标事件
-        self.time_label.bind('<Button-1>', self.show_control_panel)  # 左键点击显示控制面板
+        self.time_label.bind('<Button-1>', self.on_click)  # 左键点击
         self.time_label.bind('<Button-3>', self.quit_app)  # 右键点击退出应用
         self.time_label.bind('<B1-Motion>', self.drag_window)  # 左键拖动窗口
-        self.time_label.bind('<ButtonPress-1>', self.start_drag)  # 开始拖动
+        self.time_label.bind('<ButtonRelease-1>', self.time_label_release)  # 鼠标释放
 
         # 更新时钟
         self.update_clock()
@@ -84,7 +84,7 @@ class TimeManager:
             self.control_panel.title("控制面板")
 
             # 创建选项卡
-            # Notebook 控件允许你在同一个窗口中展示多个“页面”或“标签页”，每个标签页内可以包含不同的控件和内容。
+            # Notebook 控件允许你在同一个窗口中展示多个"页面"或"标签页"，每个标签页内可以包含不同的控件和内容。
             notebook = ttk.Notebook(self.control_panel)
 
             # 待办事项标签页
@@ -253,15 +253,42 @@ class TimeManager:
         """开始拖动时记录鼠标位置"""
         self._drag_data = {'x': event.x, 'y': event.y}
 
+    def on_click(self, event):
+        """处理左键点击事件"""
+        # 记录点击开始的位置
+        self._drag_start_x = event.x
+        self._drag_start_y = event.y
+        self._click_time = time.time()
+        self.start_drag(event)
+
     def drag_window(self, event):
         """处理窗口拖动"""
         if hasattr(self, '_drag_data'):
-            # 计算新位置
+            # 计算拖动距离
             deltax = event.x - self._drag_data['x']
             deltay = event.y - self._drag_data['y']
+            
+            # 如果拖动距离很小，可能是点击而不是拖动
+            if abs(deltax) < 3 and abs(deltay) < 3:
+                return
+                
             x = self.root.winfo_x() + deltax
             y = self.root.winfo_y() + deltay
             self.root.geometry(f'+{x}+{y}')
+            
+            # 标记为拖动状态
+            self._is_dragging = True
+
+    def time_label_release(self, event):
+        """处理鼠标释放事件"""
+        if not hasattr(self, '_is_dragging') or not self._is_dragging:
+            # 如果没有拖动，则显示控制面板
+            self.show_control_panel(event)
+        
+        # 重置拖动状态
+        self._is_dragging = False
+        if hasattr(self, '_drag_data'):
+            del self._drag_data
 
     def quit_app(self, event):
         """退出应用程序"""
